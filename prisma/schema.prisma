@@ -11,8 +11,16 @@ datasource db {
 }
 
 model Project {
-  id String @id
+  id String @id @default(uuid())
   name String
-  worflow_id String
+  workflow Workflow? @relation(fields: [workflow_id], references: [id])
+  workflow_id String? @unique
+  createdAt DateTime @default(now())
+}
 
+model Workflow {
+  id String @id @default(uuid())
+  name String
+  project Project?
+  createdAt DateTime @default(now())
 }
