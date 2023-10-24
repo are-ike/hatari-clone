@@ -1,44 +1,25 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
-
 const express = require("express");
+const cors = require("cors");
+
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 async function main() {
   await prisma.project.deleteMany();
-  await prisma.workflow.deleteMany();
 
   const projects = await prisma.project.createMany({
     data: [
-      { name: "Project 1" },
-      { name: "Project 2" },
-      { name: "Project 9" },
-      { name: "Project 10" },
-      { name: "Project 1kkk" },
-      { name: "Project 1lll" },
-      { name: "Project 1" },
-      { name: "Project 2" },
-      { name: "Project 9" },
-      { name: "Project 10" },
-      { name: "Project 1kkk" },
-      { name: "Project 1lll" },
-    ],
-  });
-  const workflows = await prisma.workflow.createMany({
-    data: [
-      { name: "Project 1" },
-      { name: "Project 2" },
-      { name: "Project 9" },
-      { name: "Project 10" },
-      { name: "Project 1kkk" },
-      { name: "Project 1lll" },
-      { name: "Project 1" },
-      { name: "Project 2" },
-      { name: "Project 9" },
-      { name: "Project 10" },
-      { name: "Project 1kkk" },
-      { name: "Project 1lll" },
+      {
+        name: "Project 1",
+        description: "try everything",
+      },
+      { name: "Project 2", description: "try everything" },
+      { name: "Project 9", description: "try everything" },
+      { name: "Project 10", description: "try everything" },
+      { name: "Project 1kkk", description: "try everything" },
     ],
   });
 }
@@ -49,65 +30,115 @@ main().catch((e) => console.log(e));
 
 //Get projects
 app.get("/projects", async (req, res) => {
-  const projects = await prisma.project.findMany();
-  res.json(projects);
+  try {
+    const projects = await prisma.project.findMany();
+    const reversedProjects = projects.reverse();
+    res.status(200).json(reversedProjects);
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 //Get a project
 app.get("/projects/:id", async (req, res) => {
-  const project = await prisma.project.findUnique({
-    where: {
-      id: req.params.id,
-    },
-  });
+  try {
+    const project = await prisma.project.findUnique({
+      where: {
+        id: req.params.id,
+      },
+    });
 
-  if (!project) {
-    res.status(404).json({ error: "Project not found" });
-  } else {
-    res.json(project);
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+    } else {
+      res.status(200).json(project);
+    }
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 //Create a project
+app.post("/projects", async (req, res) => {
+  const { name, description } = req.body;
+
+  try {
+    const project = await prisma.project.create({
+      data: {
+        name,
+        description,
+      },
+    });
+
+    const response = {
+      message: "success",
+      project,
+    };
+
+    res.status(200).json(response);
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+//Update project
+app.put("/projects/:id", async (req, res) => {
+  const data = req.body;
+
+  try {
+    const project = await prisma.project.update({
+      where: {
+        id: req.params.id,
+      },
+      data: {
+        ...data,
+      },
+    });
+
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+    } else {
+      const response = {
+        message: "success",
+        project,
+      };
+
+      res.status(200).json(response);
+    }
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 //Delete a project
+app.delete("/projects/:id", async (req, res) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: {
+        id: req.params.id,
+      },
+    });
 
-//Update a project
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+    } else {
+      await prisma.project.delete({
+        where: {
+          id: req.params.id,
+        },
+      });
+      res.status(200).json({ message: "Project deleted" });
+    }
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 //EVENTS
 
 //Get events
 
 //Get an event
-
-//WORKFLOWS
-
-//Get workflows
-app.get("/workflows", async (req, res) => {
-  const workflows = await prisma.workflow.findMany();
-  res.json(workflows);
-});
-
-//Get a workflow
-app.get("/workflows/:id", async (req, res) => {
-  const workflow = await prisma.workflow.findUnique({
-    where: {
-      id: req.params.id,
-    },
-  });
-
-  if (!workflow) {
-    res.status(404).json({ error: "Workflow not found" });
-  } else {
-    res.json(workflow);
-  }
-});
-
-//Create a workflow
-
-//Delete a workflow
-
-//Update a workflow
 
 const port = process.env.PORT || 8000;
 app.listen(port);

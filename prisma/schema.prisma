@@ -12,15 +12,13 @@ datasource db {
 
 model Project {
   id String @id @default(uuid())
-  name String
-  workflow Workflow? @relation(fields: [workflow_id], references: [id])
-  workflow_id String? @unique
-  createdAt DateTime @default(now())
-}
-
-model Workflow {
-  id String @id @default(uuid())
-  name String
-  project Project?
+  name String 
+  description String @default("")
+  nodes String @default("")
+  status Boolean @default(false)
+  project_url String @default("")
+  webhook String @default("")
+  //workflow Workflow? @relation(fields: [workflow_id], references: [id])
+  //workflow_id String? @unique
   createdAt DateTime @default(now())
 }
