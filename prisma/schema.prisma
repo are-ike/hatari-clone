@@ -22,3 +22,20 @@ model Project {
   //workflow_id String? @unique
   createdAt DateTime @default(now())
 }
+
+model Event {
+  id String @id @default(uuid())
+  transaction_id String 
+  project_id String
+  user String
+  gateway String
+  amount Decimal
+  transaction_type String
+  country String
+  currency String
+  card_type String
+  last_4_digits Int
+  status Boolean @default(false)
+  action String?
+  createdAt DateTime @default(now())
+}
