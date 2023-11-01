@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const Joi = require("joi");
 const {
   nodeTypes,
   useOperators,
@@ -14,34 +15,112 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+const itemCount = 10;
+
+const schema = Joi.object({
+  transaction: Joi.object({
+    id: Joi.string().required(),
+    time: Joi.date().required(),
+    amount: Joi.number().required(),
+    currency: Joi.string().required(),
+    type: Joi.string().required(),
+    gateway: Joi.string().required(),
+  }),
+  user: Joi.object({
+    id: Joi.string().required(),
+    email: Joi.string().email().required(),
+    name: Joi.string().required(),
+    mobile: Joi.number().integer().required(),
+  }),
+  sender: Joi.object({
+    id: Joi.string().required(),
+    account_name: Joi.string().required(),
+    bank_name: Joi.string().required(),
+    account_number: Joi.string().required(),
+    country: Joi.string().required(),
+  }),
+  receiver: Joi.object({
+    id: Joi.string().required(),
+    account_name: Joi.string().required(),
+    bank_name: Joi.string().required(),
+    account_number: Joi.string().required(),
+    country: Joi.string().required(),
+  }),
+  device: Joi.object({
+    ip_address: Joi.string().required(),
+    device_id: Joi.string().required(),
+    type: Joi.string().required(),
+    os: Joi.string().required(),
+  }),
+  address: Joi.object({
+    street: Joi.string().required(),
+    city: Joi.string().required(),
+    country: Joi.string().required(),
+  }),
+});
+
 async function main() {
   await prisma.project.deleteMany();
   await prisma.event.deleteMany();
 
-  const projects = await prisma.project.createMany({
-    data: [
-      {
-        name: "Project 1",
-        description: "try everything",
-      },
-      { name: "Project 2", description: "try everything" },
-      { name: "Project 9", description: "try everything" },
-      { name: "Project 10", description: "try everything" },
-      { name: "Project 1kkk", description: "try everything" },
-    ],
-  });
+  // const projects = await prisma.project.createMany({
+  //   data: [
+  //     {
+  //       name: "Project 1",
+  //       description: "try everything",
+  //     },
+  //     { name: "Project 2", description: "try everything" },
+  //     { name: "Project 9", description: "try everything" },
+  //     { name: "Project 10", description: "try everything" },
+  //     { name: "Project 1kkk", description: "try everything" },
+  //   ],
+  // });
 }
 
 main().catch((e) => console.log(e));
 
 //PROJECTS
+app.get("/me/:id", async (req, res) => {
+  console.log(req.params.id, 1);
+  try {
+    if(req.params.id == 1) {
+      res.json('yh').status(200)
+      
+    } else{
 
+      res.json('no').status(200)
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 //Get projects
 app.get("/projects", async (req, res) => {
   try {
-    const projects = await prisma.project.findMany();
-    const reversedProjects = projects.reverse();
-    res.status(200).json(reversedProjects);
+    const { page, query } = req.query;
+
+    const projects = await prisma.project.findMany({
+      skip: parseInt(page - 1) * itemCount,
+      take: itemCount,
+      where: {
+        name: {
+          contains: query,
+          mode: "insensitive",
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const response = {
+      projects,
+      totalPages: Math.ceil(projects.length / itemCount),
+      currentPage: page,
+      hasProjects: !!(await prisma.project.findMany()).length,
+    };
+    res.status(200).json(response);
   } catch (e) {
     res.status(500).json({ message: "Server error" });
   }
@@ -78,23 +157,25 @@ app.post("/projects", async (req, res) => {
       },
     });
 
-    //create project_url
+    if (project) {
+      await prisma.project.update({
+        where: {
+          id: project.id,
+        },
+        data: {
+          project_url: `${process.env.BASE_URL}/events/${project.id}`,
+        },
+      });
 
-    await prisma.project.update({
-      where: {
-        id: project.id,
-      },
-      data: {
-        project_url: `${env("BASE_URL")}/events/${project.id}`,
-      },
-    });
+      const response = {
+        message: "success",
+        project,
+      };
 
-    const response = {
-      message: "success",
-      project,
-    };
-
-    res.status(200).json(response);
+      res.status(200).json(response);
+    } else {
+      res.status(500).json({ message: "Unable to create project" });
+    }
   } catch (e) {
     res.status(500).json({ message: "Server error" });
   }
@@ -165,7 +246,7 @@ app.post("/:id/events", async (req, res) => {
     if (!project) {
       res.status(404).json({ message: "Project not found" });
     } else {
-      //Set status to connected
+      //Set project status to connected
       await prisma.project.update({
         where: {
           id: req.params.id,
@@ -260,14 +341,26 @@ app.post("/:id/events", async (req, res) => {
 //Get events
 app.get("/:id/events", async (req, res) => {
   try {
+    const { page } = req.query;
+
     const events = await prisma.event.findMany({
+      skip: parseInt(page - 1) * itemCount,
+      take: itemCount,
       where: {
         project_id: req.params.id,
       },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    const reversedEvents = events.reverse();
-    res.status(200).json(reversedEvents);
+    const response = {
+      events,
+      totalPages: Math.ceil(events.length / itemCount),
+      currentPage: page,
+    };
+
+    res.status(200).json(response);
   } catch (e) {
     res.status(500).json({ message: "Server error" });
   }
@@ -276,9 +369,10 @@ app.get("/:id/events", async (req, res) => {
 //Get an event
 app.get("/:id/:eventId", async (req, res) => {
   try {
+    const { id, eventId } = req.params;
     const event = await prisma.event.findUnique({
       where: {
-        id: req.params.eventId,
+        id: eventId,
         project_id: id,
       },
     });
@@ -292,6 +386,7 @@ app.get("/:id/:eventId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 async function sendEventResult(webhook, data) {
   try {
