@@ -31,28 +31,3 @@ model Event {
   data String
   createdAt DateTime @default(now())
 }
-
-//Types
-
-//Models
-// model Transaction {
-//   id String @id
-//   time DateTime @default(now())
-//   amount Decimal
-//   currency String
-//   type String
-//   gateway String
-// }
-// model User {
-//   id String @id
-//   email String
-//   name String
-//   mobile Int
-// }
-// model Account {
-//   id String @id
-//   account_name String
-//   bank_name String
-//   account_number String
-//   country String
-// }

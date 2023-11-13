@@ -30,37 +30,38 @@ const useOperators = (a, b, operator) => {
       break;
   }
 
-  return result
+  return result;
 };
-
-//  const useCondition = (a, b, condition) => {
-//   let result;
-
-//   switch (condition) {
-//     case "AND":
-//       result = a && b;
-//       break;
-//     case "OR":
-//       result = a || b;
-//       break;
-
-//     default:
-//       result = undefined;
-//       break;
-//   }
-
-//   return result;
-// };
 
 const conditions = {
   AND: "&&",
   OR: "||",
 };
-const eventSchema = {};
 
 const nodeTypes = {
   rule: "rule",
   action: "action",
+};
+
+const transformEvent = (event) => {
+  const eventData = JSON.parse(event.data);
+  const { transaction_id, amount, currency, gateway, type } = eventData.transaction;
+  const { name } = eventData.user;
+  const { country } = eventData.address;
+
+  delete event.data
+  const newEvent = {
+    ...event,
+    transaction_id,
+    amount,
+    currency,
+    gateway,
+    user: name,
+    type,
+    country
+  };
+
+  return newEvent
 };
 
 module.exports = {
@@ -68,4 +69,5 @@ module.exports = {
   conditions,
   useOperators,
   defaultActions,
+  transformEvent
 };
